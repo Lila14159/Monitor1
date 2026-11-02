@@ -1,0 +1,9 @@
+[project]
+name = "strict-crypto-monitor"
+version = "1.0.0"
+description = "Public, read-only crypto monitoring with explicit Discord webhook delivery"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.ruff]
+line-length = 110

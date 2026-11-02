@@ -1,0 +1,206 @@
+{
+  "sources": {
+    "news_feeds": [
+      {
+        "name": "SEC press releases",
+        "url": "https://www.sec.gov/news/pressreleases.rss",
+        "item_domains": [
+          "www.sec.gov"
+        ],
+        "category": "regulatory",
+        "primary": true
+      },
+      {
+        "name": "CFTC press releases",
+        "url": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml",
+        "item_domains": [
+          "www.cftc.gov"
+        ],
+        "category": "regulatory",
+        "primary": true
+      },
+      {
+        "name": "FCA news",
+        "url": "https://www.fca.org.uk/news/rss.xml",
+        "item_domains": [
+          "www.fca.org.uk"
+        ],
+        "category": "regulatory",
+        "primary": true
+      },
+      {
+        "name": "Ethereum Foundation",
+        "url": "https://blog.ethereum.org/en/feed.xml",
+        "item_domains": [
+          "blog.ethereum.org"
+        ],
+        "category": "security",
+        "primary": true,
+        "assets": [
+          "ethereum"
+        ]
+      },
+      {
+        "name": "Bitcoin Core",
+        "url": "https://bitcoincore.org/en/rss.xml",
+        "item_domains": [
+          "bitcoincore.org"
+        ],
+        "category": "security",
+        "primary": true,
+        "assets": [
+          "bitcoin"
+        ]
+      },
+      {
+        "name": "Decrypt",
+        "url": "https://decrypt.co/feed",
+        "item_domains": [
+          "decrypt.co"
+        ],
+        "category": "market",
+        "primary": false
+      }
+    ],
+    "exchange_status": {
+      "gdax": {
+        "name": "Coinbase status",
+        "url": "https://status.coinbase.com/api/v2/incidents.json",
+        "item_domains": [
+          "status.coinbase.com"
+        ]
+      },
+      "kraken": {
+        "name": "Kraken status",
+        "url": "https://status.kraken.com/api/v2/incidents.json",
+        "item_domains": [
+          "status.kraken.com"
+        ]
+      },
+      "crypto_com": {
+        "name": "Crypto.com status",
+        "url": "https://status.crypto.com/api/v2/incidents.json",
+        "item_domains": [
+          "status.crypto.com"
+        ]
+      },
+      "gemini": {
+        "name": "Gemini status",
+        "url": "https://status.gemini.com/api/v2/incidents.json",
+        "item_domains": [
+          "status.gemini.com"
+        ]
+      }
+    },
+    "stablecoins": {
+      "tether": {
+        "peg": 1.0,
+        "kraken_pair": "USDTUSD",
+        "response_pairs": [
+          "USDTZUSD",
+          "USDTUSD"
+        ]
+      },
+      "usd-coin": {
+        "peg": 1.0,
+        "kraken_pair": "USDCUSD",
+        "response_pairs": [
+          "USDCUSD"
+        ]
+      },
+      "dai": {
+        "peg": 1.0,
+        "kraken_pair": "DAIUSD",
+        "response_pairs": [
+          "DAIUSD"
+        ]
+      },
+      "paypal-usd": {
+        "peg": 1.0,
+        "kraken_pair": "PYUSDUSD",
+        "response_pairs": [
+          "PYUSDUSD"
+        ]
+      },
+      "ethena-usde": {
+        "peg": 1.0,
+        "kraken_pair": "USDEUSD",
+        "response_pairs": [
+          "USDEUSD"
+        ]
+      },
+      "true-usd": {
+        "peg": 1.0,
+        "kraken_pair": "TUSDUSD",
+        "response_pairs": [
+          "TUSDUSD"
+        ]
+      },
+      "first-digital-usd": {
+        "peg": 1.0,
+        "kraken_pair": null
+      },
+      "usdd": {
+        "peg": 1.0,
+        "kraken_pair": null
+      }
+    },
+    "liquidations": {
+      "enabled": false,
+      "symbols": [
+        "BTC",
+        "ETH"
+      ],
+      "exchange_list": [
+        "Binance",
+        "OKX",
+        "Bybit"
+      ]
+    },
+    "etf_flows": {
+      "enabled": false,
+      "assets": [
+        "bitcoin",
+        "ethereum"
+      ]
+    }
+  },
+  "thresholds": {
+    "depeg_fraction": 0.01,
+    "depeg_critical_fraction": 0.05,
+    "depeg_recovery_fraction": 0.005,
+    "confirmation_min_minutes": 30,
+    "confirmation_max_minutes": 120,
+    "security_material_usd": 10000000,
+    "regulatory_material_usd": 100000000,
+    "institutional_material_usd": 1000000000,
+    "etf_flow_btc_usd": 100000000,
+    "etf_flow_eth_usd": 50000000,
+    "liquidation_btc_usd": 100000000,
+    "liquidation_eth_usd": 50000000,
+    "liquidation_critical_multiplier": 3,
+    "news_max_age_hours": 48,
+    "news_alert_max_age_hours": 6,
+    "snapshot_max_age_minutes": 20,
+    "quote_max_age_minutes": 10,
+    "state_retention_days": 30,
+    "max_seen_items": 5000,
+    "max_incidents": 500
+  },
+  "schedule": {
+    "timezone": "Asia/Taipei",
+    "digest_hours": [
+      9,
+      21
+    ],
+    "grace_hours": 3
+  },
+  "digest": {
+    "major_move_pct": 5,
+    "other_move_pct": 10
+  },
+  "safety": {
+    "max_messages_per_run": 5,
+    "max_messages_per_day": 20
+  }
+}
