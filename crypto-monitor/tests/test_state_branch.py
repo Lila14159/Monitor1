@@ -135,7 +135,7 @@ class StateTests(unittest.TestCase):
         self.assertEqual(len(sent), 1)
 
     def test_workflow_summary_renders_newlines_and_escapes_source_text(self):
-        workflow = (Path(__file__).parents[1] / ".github/workflows/monitor.yml").read_text()
+        workflow = (Path(__file__).parents[2] / ".github/workflows/monitor.yml").read_text()
         script = textwrap.dedent(workflow.split("python - <<'PY'\n", 1)[1].rsplit("          PY", 1)[0])
         (self.base / "work").mkdir()
         hostile = "</pre><script>bad()</script><img src=x onerror=bad()>"
