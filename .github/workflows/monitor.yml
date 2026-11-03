@@ -1,0 +1,121 @@
+name: Crypto monitor
+
+on:
+  schedule:
+    - cron: '0 9,21 * * *'
+      timezone: Asia/Taipei
+    - cron: '17 * * * *'
+      timezone: Asia/Taipei
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview only; do not persist changes or post to Discord
+        type: boolean
+        required: true
+        default: true
+      initialize:
+        description: First run only; seed a missing state branch quietly
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+# All scheduled and manual writers share one lock, independent of branch/ref.
+# Do not cancel a run between its durable intent and delivery acknowledgment.
+concurrency:
+  group: crypto-monitor-state
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    if: >-
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      (github.event_name == 'workflow_dispatch' || vars.MONITOR_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: write # The helper writes monitor-state; this token permission is repository-wide.
+    env:
+      PYTHONUNBUFFERED: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+      INITIALIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.initialize && 'true' || 'false' }}
+    steps:
+      - name: Check out reviewed default-branch code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: true # Required by the state branch helper; removed in cleanup.
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Load durable state, or explicitly initialize
+        run: |
+          args=()
+          if [[ "$INITIALIZE" == "true" ]]; then args+=(--initialize); fi
+          python scripts/state_branch.py load --state state/state.json --metadata work/state-meta.json "${args[@]}"
+      - name: Collect public data and prepare bounded messages
+        id: plan
+        env:
+          COINGECKO_DEMO_API_KEY: ${{ secrets.COINGECKO_DEMO_API_KEY }}
+          COINGLASS_API_KEY: ${{ secrets.COINGLASS_API_KEY }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: |
+          args=()
+          if [[ "$DRY_RUN" == "true" ]]; then args+=(--dry-run); fi
+          if [[ "$INITIALIZE" == "true" ]]; then args+=(--initialize); fi
+          python -m crypto_monitor plan --state state/state.json --plan work/plan.json --report work/report.json "${args[@]}"
+      - name: Persist intent before any Discord request
+        id: persist
+        if: env.DRY_RUN != 'true'
+        run: python scripts/state_branch.py save --state state/state.json --metadata work/state-meta.json
+      - name: Verify durable intent
+        id: verify
+        if: env.DRY_RUN != 'true'
+        run: python scripts/state_branch.py verify --state state/state.json --metadata work/state-meta.json
+      - name: Deliver only the exact new messages in this plan
+        id: deliver
+        if: env.DRY_RUN != 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m crypto_monitor deliver --state state/state.json --plan work/plan.json --send
+      - name: Persist delivery results even when delivery fails
+        if: >-
+          always() && env.DRY_RUN != 'true' && steps.persist.outcome == 'success' &&
+          (steps.deliver.outcome == 'success' || steps.deliver.outcome == 'failure' || steps.deliver.outcome == 'cancelled')
+        run: python scripts/state_branch.py save --state state/state.json --metadata work/state-meta.json
+      - name: Add a safe run summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import html, json, os, re
+          from pathlib import Path
+          report = Path('work/report.json')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as out:
+              out.write('## Crypto monitor\n\n')
+              out.write('Dry run: ' + ('yes' if os.environ['DRY_RUN'] == 'true' else 'no') + '\n\n')
+              if report.exists():
+                  obj = json.loads(report.read_text())
+                  # Counter labels are constrained; source text below is HTML-escaped.
+                  for key, value in sorted(obj.items()):
+                      if isinstance(value, (int, float, bool)) and key.replace('_', '').isalnum():
+                          out.write(f'- {key}: {value}\n')
+                  out.write('\n| Source | Coverage |\n|---|---|\n')
+                  for key, value in sorted(obj.get('coverage', {}).items())[:50]:
+                      label = re.sub(r'[^a-zA-Z0-9 _:.-]', '?', str(key))[:100]
+                      status = value.get('status') if isinstance(value, dict) else None
+                      status = status if status in ('ok', 'degraded', 'unavailable') else 'unknown'
+                      out.write(f'| {label} | {status} |\n')
+                  out.write('\nSource errors reported: ' + str(len(obj.get('errors', []))) + '\n')
+                  details = {key: obj.get(key) for key in ('as_of', 'digest_slot', 'coverage', 'errors', 'universe', 'preview_messages')}
+                  preview = json.dumps(details, ensure_ascii=False, indent=2)[:40000]
+                  out.write('\n<details><summary>Coverage details and proposed messages</summary>\n\n<pre>')
+                  out.write(html.escape(preview))
+                  out.write('</pre>\n</details>\n')
+                  out.write('\nSee step status and bounded monitor logs for coverage and delivery outcomes.\n')
+              else:
+                  out.write('No report was produced. Inspect the failed step.\n')
+          PY
